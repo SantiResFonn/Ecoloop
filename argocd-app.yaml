@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ecoloop
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/SantiResFonn/Ecoloop
+    targetRevision: master
+    path: k8s
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ecoloop
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

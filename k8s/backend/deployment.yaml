@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecoloop-backend
+  namespace: ecoloop
+  labels:
+    app: ecoloop-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecoloop-backend
+  template:
+    metadata:
+      labels:
+        app: ecoloop-backend
+    spec:
+      containers:
+        - name: backend
+          image: santiagorestrefon/ecoloop-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3001
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3001"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ecoloop-secrets
+                  key: DATABASE_URL
+            - name: DIRECT_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ecoloop-secrets
+                  key: DATABASE_URL
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ecoloop-secrets
+                  key: JWT_SECRET
+            - name: FRONTEND_URL
+              value: "http://ecoloop-frontend:3000"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 30
+            periodSeconds: 20
