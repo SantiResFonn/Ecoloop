@@ -7,11 +7,16 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
+  - name: jnlp
+    image: santiagorestrefon/jenkins-jnlp-kaniko
+    imagePullPolicy: Always
+    volumeMounts:
+    - name: docker-config
+      mountPath: /kaniko/.docker
   - name: node
     image: node:22-alpine
     command: ["cat"]
     tty: true
-    workingDir: /home/jenkins/agent
   - name: kaniko
     image: gcr.io/kaniko-project/executor:debug
     command: ["/busybox/cat"]
@@ -120,7 +125,7 @@ spec:
 
   post {
     success {
-      echo "✅ Pipeline exitoso — build #${IMAGE_TAG} desplegado"
+      echo "✅ Pipeline exitoso — build #${IMAGE_TAG} en Docker Hub"
     }
     failure {
       echo "❌ Pipeline fallido — revisar los logs"
