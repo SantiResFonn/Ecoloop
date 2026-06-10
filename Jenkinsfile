@@ -54,12 +54,12 @@ pipeline {
     stage('Build & Push Backend') {
       steps {
         sh """
+          export DOCKER_CONFIG=/tmp/kaniko-config
           /kaniko/executor \
             --context=\${WORKSPACE}/EcoLoop_Backend \
             --dockerfile=\${WORKSPACE}/EcoLoop_Backend/Dockerfile \
             --destination=${BACKEND_IMAGE}:${IMAGE_TAG} \
             --destination=${BACKEND_IMAGE}:latest \
-            --docker-cfg=/tmp/kaniko-config \
             --cache=true
         """
       }
@@ -69,13 +69,13 @@ pipeline {
     stage('Build & Push Frontend') {
       steps {
         sh """
+          export DOCKER_CONFIG=/tmp/kaniko-config
           /kaniko/executor \
             --context=\${WORKSPACE}/EcoLoop_Frontend \
             --dockerfile=\${WORKSPACE}/EcoLoop_Frontend/Dockerfile \
             --build-arg NEXT_PUBLIC_API_URL=http://ecoloop-backend:3001 \
             --destination=${FRONTEND_IMAGE}:${IMAGE_TAG} \
             --destination=${FRONTEND_IMAGE}:latest \
-            --docker-cfg=/tmp/kaniko-config \
             --cache=true
         """
       }
