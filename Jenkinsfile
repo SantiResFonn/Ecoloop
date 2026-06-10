@@ -1,4 +1,3 @@
-
 pipeline {
   agent {
     label 'jenkins-agent'
@@ -60,7 +59,8 @@ pipeline {
             --dockerfile=\${WORKSPACE}/EcoLoop_Backend/Dockerfile \
             --destination=${BACKEND_IMAGE}:${IMAGE_TAG} \
             --destination=${BACKEND_IMAGE}:latest \
-            --cache=true
+            --registry-credential index.docker.io=santiagorestrefon:99112809380sF. \
+            --cache=false
         """
       }
     }
@@ -76,7 +76,8 @@ pipeline {
             --build-arg NEXT_PUBLIC_API_URL=http://ecoloop-backend:3001 \
             --destination=${FRONTEND_IMAGE}:${IMAGE_TAG} \
             --destination=${FRONTEND_IMAGE}:latest \
-            --cache=true
+            --registry-credential index.docker.io=santiagorestrefon:99112809380sF. \
+            --cache=false
         """
       }
     }
