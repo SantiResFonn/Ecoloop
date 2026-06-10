@@ -41,9 +41,11 @@ pipeline {
     stage('Setup Docker Auth') {
       steps {
         sh '''
-          mkdir -p /kaniko/.docker
-          echo '{"auths":{"https://index.docker.io/v1/":{"auth":"'"$(echo -n santiagorestrefon:99112809380sF. | base64)"'"}}}' > /kaniko/.docker/config.json
-          cat /kaniko/.docker/config.json
+          mkdir -p /tmp/kaniko-config
+          AUTH=$(echo -n "santiagorestrefon:99112809380sF." | base64)
+          echo '{"auths":{"https://index.docker.io/v1/":{"auth":"'$AUTH'"}}}' > /tmp/kaniko-config/config.json
+          echo "Config creado:"
+          cat /tmp/kaniko-config/config.json
         '''
       }
     }
@@ -57,6 +59,7 @@ pipeline {
             --dockerfile=\${WORKSPACE}/EcoLoop_Backend/Dockerfile \
             --destination=${BACKEND_IMAGE}:${IMAGE_TAG} \
             --destination=${BACKEND_IMAGE}:latest \
+            --docker-cfg=/tmp/kaniko-config \
             --cache=true
         """
       }
@@ -72,6 +75,7 @@ pipeline {
             --build-arg NEXT_PUBLIC_API_URL=http://ecoloop-backend:3001 \
             --destination=${FRONTEND_IMAGE}:${IMAGE_TAG} \
             --destination=${FRONTEND_IMAGE}:latest \
+            --docker-cfg=/tmp/kaniko-config \
             --cache=true
         """
       }
@@ -103,4 +107,3 @@ pipeline {
     }
   }
 }
- 
