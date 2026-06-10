@@ -7,6 +7,11 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
+  - name: node
+    image: node:22-alpine
+    command: ["cat"]
+    tty: true
+    workingDir: /home/jenkins/agent
   - name: kaniko
     image: gcr.io/kaniko-project/executor:debug
     command: ["/busybox/cat"]
@@ -14,10 +19,6 @@ spec:
     volumeMounts:
     - name: docker-config
       mountPath: /kaniko/.docker
-  - name: kubectl
-    image: bitnami/kubectl:latest
-    command: ["cat"]
-    tty: true
   volumes:
   - name: docker-config
     secret:
@@ -41,6 +42,29 @@ spec:
       }
     }
 
+    // ─── PRUEBAS UNITARIAS ────────────────────────────────────
+    stage('Unit Tests') {
+      steps {
+        container('node') {
+          dir('EcoLoop_Backend') {
+            sh 'npm install'
+            sh 'npx prisma generate'
+            sh 'npm test -- --reporter=verbose --reporter=junit --outputFile=test-results.xml'
+          }
+        }
+      }
+      post {
+        always {
+          junit testResults: 'EcoLoop_Backend/test-results.xml',
+                allowEmptyResults: true
+        }
+        failure {
+          error '❌ Pruebas unitarias fallidas — abortando pipeline'
+        }
+      }
+    }
+
+    // ─── BUILD & PUSH BACKEND ─────────────────────────────────
     stage('Build & Push Backend') {
       steps {
         container('kaniko') {
@@ -56,6 +80,7 @@ spec:
       }
     }
 
+    // ─── BUILD & PUSH FRONTEND ────────────────────────────────
     stage('Build & Push Frontend') {
       steps {
         container('kaniko') {
@@ -72,19 +97,22 @@ spec:
       }
     }
 
-    stage('Update K8s Image Tags') {
+    // ─── ACTUALIZAR TAG EN MANIFESTS (GitOps para ArgoCD) ─────
+    stage('Update K8s Manifests') {
       steps {
-        sh """
-          sed -i "s|${BACKEND_IMAGE}:.*|${BACKEND_IMAGE}:${IMAGE_TAG}|g" k8s/backend/deployment.yaml
-          sed -i "s|${FRONTEND_IMAGE}:.*|${FRONTEND_IMAGE}:${IMAGE_TAG}|g" k8s/frontend/deployment.yaml
-        """
-        sh """
-          git config user.email 'jenkins@ecoloop.com'
-          git config user.name 'Jenkins'
-          git add k8s/backend/deployment.yaml k8s/frontend/deployment.yaml
-          git commit -m "ci: update images to build #${IMAGE_TAG}" || echo "No changes to commit"
-          git push origin master
-        """
+        container('node') {
+          sh """
+            sed -i "s|${BACKEND_IMAGE}:.*|${BACKEND_IMAGE}:${IMAGE_TAG}|g" k8s/backend/deployment.yaml
+            sed -i "s|${FRONTEND_IMAGE}:.*|${FRONTEND_IMAGE}:${IMAGE_TAG}|g" k8s/frontend/deployment.yaml
+          """
+          sh """
+            git config user.email 'jenkins@ecoloop.com'
+            git config user.name 'Jenkins'
+            git add k8s/backend/deployment.yaml k8s/frontend/deployment.yaml
+            git commit -m "ci: update images to build #${IMAGE_TAG}" || echo "Sin cambios"
+            git push origin master
+          """
+        }
       }
     }
 
@@ -92,10 +120,10 @@ spec:
 
   post {
     success {
-      echo "✅ Pipeline exitoso — imágenes ${IMAGE_TAG} publicadas en Docker Hub"
+      echo "✅ Pipeline exitoso — build #${IMAGE_TAG} desplegado"
     }
     failure {
-      echo "❌ Pipeline fallido — revisar logs"
+      echo "❌ Pipeline fallido — revisar los logs"
     }
   }
 }
