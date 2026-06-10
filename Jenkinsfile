@@ -19,15 +19,11 @@ pipeline {
       }
     }
  
-    // ─── INSTALAR NODE Y CORRER TESTS ─────────────────────────
+    // ─── PRUEBAS UNITARIAS ────────────────────────────────────
     stage('Unit Tests') {
       steps {
         sh '''
-          # Instalar Node.js 22 en el agente
-          apk add --no-cache nodejs npm || \
-          (apt-get update -qq && apt-get install -y -qq nodejs npm) || \
-          true
- 
+          apt-get update -qq && apt-get install -y -qq nodejs npm
           cd EcoLoop_Backend
           npm install
           npx prisma generate
@@ -38,6 +34,17 @@ pipeline {
         failure {
           error '❌ Pruebas unitarias fallidas — abortando pipeline'
         }
+      }
+    }
+ 
+    // ─── CREAR config.json PARA KANIKO ───────────────────────
+    stage('Setup Docker Auth') {
+      steps {
+        sh '''
+          mkdir -p /kaniko/.docker
+          echo '{"auths":{"https://index.docker.io/v1/":{"auth":"'"$(echo -n santiagorestrefon:99112809380sF. | base64)"'"}}}' > /kaniko/.docker/config.json
+          cat /kaniko/.docker/config.json
+        '''
       }
     }
  
@@ -96,3 +103,4 @@ pipeline {
     }
   }
 }
+ 
